@@ -11,6 +11,8 @@ To address common challenges such as **overfitting** and **slow convergence** wh
 
 ## 🏗️ Architecture & Methodology
 
+![2-Stage Pipeline Architecture](./assets/pipeline_diagram.png)
+
 ### 1. Custom ResNet Implementation
 Instead of using `torchvision.models`, I implemented the **ResNet-18 architecture from scratch** to fully understand the residual learning framework and ensure model lightweighting.
 * **Residual Block:** Implemented Skip Connections (`F(x) + x`) to prevent the Vanishing Gradient problem.
