@@ -7,7 +7,9 @@
 ## 📌 Project Overview
 The goal of this project was to achieve significant performance on the **Food-101 dataset (101 classes)** by training a Deep Learning model **from scratch**, without relying on pre-trained weights (e.g., ImageNet).
 
-To address common challenges such as **overfitting** and **slow convergence** when training from scratch, I designed a **Custom ResNet Architecture** and a unique **2-Stage Progressive Augmentation Pipeline**.
+To address common challenges such as **overfitting**, **slow convergence**, and **experimental reliability**, I focused on two key engineering pillars:
+1. **Custom ResNet Architecture** & **2-Stage Progressive Augmentation Pipeline**.
+2. **Strict Data Integrity Pipeline** to prevent data leakage between training and validation sets.
 
 ## 🏗️ Architecture & Methodology
 
@@ -28,6 +30,13 @@ To maximize training efficiency, I divided the training process into two distinc
 
 * **Insight:** In the early stage, strong distortions were applied to force the model to learn general features such as shape and texture. In the later stage, the augmentation was relaxed to fine-tune the model under a distribution similar to the real test data.
 
+### 3. Data Pipeline Integrity (Engineering Logic 🛠️)
+A common pitfall in PyTorch `random_split` is that transforms are applied globally, leading to **Data Leakage** (augmentations applied to validation data). I architected a strict pipeline to prevent this:
+
+* **Physical Decoupling:** Utilized `torch.utils.data.Subset` to completely separate the indices of Training and Validation sets.
+* **Leakage Prevention:** Applied **Augmentation** (Crop, Rotate, Jitter) *only* to the Training Subset, while keeping the Validation Subset **clean** (Resize/Normalize only).
+* **Result:** Guaranteed that the 73.12% accuracy is derived from a strictly isolated and reliable validation environment.
+
 ## 📊 Experiments & Results
 
 ### Performance Comparison
@@ -37,7 +46,7 @@ To maximize training efficiency, I divided the training process into two distinc
 | Custom ResNet-18 | Standard Training | 55.85% | Baseline |
 | ResNet-50 | Transfer Learning (ImageNet) | 77.97% | Upper Bound |
 
-* **Analysis:** By applying the 2-Stage strategy, I achieved a **~17% accuracy improvement** over the baseline and significantly narrowed the gap with the pre-trained model.
+* **Analysis:** By applying the 2-Stage strategy, I achieved a **~17% accuracy improvement** over the baseline. Notably, this result was measured on a **strictly isolated clean validation set**, ensuring the model's robustness against real-world data distributions.
 
 ### Error Analysis (SVM)
 To verify the **Feature Extraction Capability** of the trained model, I froze the backbone and attached an SVM classifier to the output features.
