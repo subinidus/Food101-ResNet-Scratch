@@ -44,25 +44,45 @@ def run_transfer_learning():
         normalize
     ])
 
-    # ==========================================
-    # Load Data
+# ==========================================
+    # Load Data (Corrected Strategy)
     # ==========================================
     # Note: Adjust the data path relative to the experiments folder
     data_root = '../data'
     
-    print(">>> Loading Dataset...")
-    full_dataset = torchvision.datasets.Food101(root=data_root, download=True, transform=train_transform)
+    print(">>> Loading Dataset & Splitting Indices...")
     
-    # Split Train/Val (80% : 20%)
-    train_size = int(0.8 * len(full_dataset))
-    val_size = len(full_dataset) - train_size
-    train_dataset, val_dataset = random_split(full_dataset, [train_size, val_size])
+    # 1. Load base dataset just to get length and split indices
+    # (Transform is not important here, as we only need indices)
+    base_dataset = torchvision.datasets.Food101(root=data_root, download=True)
     
-    # Apply validation transform (Override transform for validation set if possible, 
-    # or rely on the fact that random split shares the transform. 
-    # For strict implementation, we would define separate subsets.)
+    train_size = int(0.8 * len(base_dataset))
+    val_size = len(base_dataset) - train_size
     
+    # 2. Split Indices (Fix seed for reproducibility)
+    # random_split returns subsets, but we extract indices to apply different transforms later
+    train_subset, val_subset = random_split(
+        base_dataset, 
+        [train_size, val_size], 
+        generator=torch.Generator().manual_seed(42)
+    )
+    
+    # 3. Create Subsets with Separate Transforms (Prevention of Data Leakage)
+    # Train Set: Apply Augmentation (train_transform)
+    train_dataset = torch.utils.data.Subset(
+        torchvision.datasets.Food101(root=data_root, download=True, transform=train_transform),
+        train_subset.indices
+    )
+    
+    # Validation Set: Apply Standard Preprocessing (val_transform, Clean)
+    val_dataset = torch.utils.data.Subset(
+        torchvision.datasets.Food101(root=data_root, download=True, transform=val_transform),
+        val_subset.indices
+    )
+    
+    # 4. Create Loaders
     train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=2)
+    # Validation shuffle is generally False to keep consistency
     val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=2)
 
     print(f"Data Loaded: {len(train_dataset)} Train samples, {len(val_dataset)} Val samples")
